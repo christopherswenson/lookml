@@ -26,9 +26,43 @@ License.
 
 Compiler toolchain for the LookML language.
 
-## Get LookML
+# Object model
 
-### From Maven
+The compiler toolchain is organized into an object model
+so that you can easily create and reuse components.
+
+The following diagram shows how those components are composed
+into a typical toolchain.
+
+![Parser object model](doc/img/parser-flow.png)
+
+The *LAX event-based parser* reads a LookML string and generates a
+stream of events (and possibly syntax errors).
+The *validator* checks that the events conform to a particular dialect
+of LookML (as defined by a *LSD schema definition*) and outputs a
+stream of validated events (and possibly schema errors).
+The *builder* receives a stream of validated events and converts them
+into an abstract syntax tree (*AST*).
+
+Key interfaces:
+* `interface LookmlSchema` represents an *LSD schema definition*
+  and defines what properties are valid for a particular dialect
+  of LookML;
+* `interface ObjectHandler` is an object that can receive
+  an *event stream*;
+* `interface PropertyHandler` is an object that can receive
+  a stream of validated events. (These are similar to
+  the events received by `ObjectHandler`, but each property
+  has been assigned a type.)
+
+One way to create a schema is to write a LookML schema file
+and use the *LSD loader* to convert it into an instance of
+`LookmlSchema`; you can also (not shown in the diagram)
+create a schema directly using `LookmlSchemas.builder()`.
+
+# Get LookML
+
+## From Maven
 
 Get LookML from
 <a href="https://search.maven.org/#search%7Cga%7C1%7Ca%3Alookml">Maven central</a>:
@@ -41,7 +75,7 @@ Get LookML from
 </dependency>
 ```
 
-### Download and build
+## Download and build
 
 You need Java (8 or higher) and Git.
 
@@ -60,10 +94,10 @@ On Windows, the last line is
 On Java versions less than 11, you should add parameters
 `-Dcheckstyle.version=9.3`.
 
-## More information
+# More information
 
-* License: <a href="LICENSE">Apache Software License, Version 2.0</a>
-* Author: the LookML Authors
+* License: <a href="LICENSE">Apache License, Version 2.0</a>
+* Author: Julian Hyde
 * Source code: https://github.com/hydromatic/lookml
 * Issues: https://github.com/hydromatic/lookml/issues
 * <a href="HISTORY.md">Release notes and history</a>
