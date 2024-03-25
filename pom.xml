@@ -64,6 +64,8 @@
     <!-- We support Guava versions 21.0 and higher. -->
     <guava.version>33.1.0-jre</guava.version>
     <hamcrest.version>2.2</hamcrest.version>
+    <javacc-maven-plugin.version>3.0.3</javacc-maven-plugin.version>
+    <javacc.version>7.0.12</javacc.version>
     <junit-jupiter.version>5.10.2</junit-jupiter.version>
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
@@ -74,6 +76,7 @@
     <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
     <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <slf4j.version>2.0.9</slf4j.version>
   </properties>
 
   <!-- Environment settings. -->
@@ -149,6 +152,11 @@
       <artifactId>junit-jupiter-params</artifactId>
       <version>${junit-jupiter.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
   </dependencies>
 
@@ -293,6 +301,33 @@
                   </includes>
                 </resource>
               </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.javacc.plugin</groupId>
+        <artifactId>javacc-maven-plugin</artifactId>
+        <version>${javacc-maven-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>net.java.dev.javacc</groupId>
+            <artifactId>javacc</artifactId>
+            <version>${javacc.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>javacc</id>
+            <goals>
+              <goal>javacc</goal>
+            </goals>
+            <configuration>
+              <includes>
+                <include>**/LookmlParser.jj</include>
+              </includes>
+              <lookAhead>2</lookAhead>
+              <isStatic>false</isStatic>
             </configuration>
           </execution>
         </executions>

@@ -1,8 +1,3 @@
-<?xml version="1.0"?>
-<!DOCTYPE suppressions PUBLIC
-        "-//Puppy Crawl//DTD Suppressions 1.1//EN"
-        "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
-<!--
 /*
  * Licensed to the LookML Authors under one or more contributor
  * license agreements.  See the NOTICE file distributed with this
@@ -21,17 +16,8 @@
  * language governing permissions and limitations under the
  * License.
  */
--->
-<suppressions>
-  <suppress checks="Header" files="LICENSE"/>
-  <suppress checks="Header" files="NOTICE"/>
 
-  <!-- Suppress checks on generated files. -->
-  <suppress checks=".*" files=".*[/\\]target[/\\]maven-archiver[/\\]pom.properties"/>
-  <suppress checks=".*" files=".*[/\\]target[/\\]generated-sources[/\\].*"/>
-  <suppress checks=".*" files="git.properties"/>
-  <suppress checks=".*" files="release.properties"/>
+/** LookML parser. */
+package net.hydromatic.lookml.parse;
 
-  <!-- Suppress JavadocPackage in the test packages -->
-  <suppress checks="JavadocPackage" files="src[/\\]test[/\\]java[/\\]"/>
-</suppressions>
+// End package-info.java

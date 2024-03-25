@@ -42,9 +42,9 @@ import java.util.function.Consumer;
  * <p>Methods have defaults, so that it is easy to create a handler
  * that does just what you need it to.
  *
- * @see ListHandler
  * @see LaxHandlers#nullObjectHandler()
  * @see LaxHandlers#logger(Consumer)
+ * @see FilterObjectHandler
  * @see ListHandler */
 public interface ObjectHandler {
 

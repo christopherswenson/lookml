@@ -20,15 +20,21 @@ package net.hydromatic.lookml.test;
 
 import net.hydromatic.lookml.LaxHandlers;
 import net.hydromatic.lookml.ObjectHandler;
+import net.hydromatic.lookml.parse.LookmlParsers;
 
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Tests for the LookML event-based parser. */
 public class LaxTest {
@@ -46,6 +52,20 @@ public class LaxTest {
                         .list(h3 -> h3.string("singleton")))
                 .list("emptyList", h2 -> {}))
         .close();
+  }
+
+  private static void assertParse(String s, Matcher<List<String>> matcher) {
+    final ParseFixture.Parsed f = ParseFixture.of().parse(s);
+    assertThat(f.list, matcher);
+  }
+
+  private static void assertParseThrows(String s, Matcher<Throwable> matcher) {
+    try {
+      final ParseFixture.Parsed f = ParseFixture.of().parse(s);
+      fail("expected error, got " + f.list);
+    } catch (RuntimeException e) {
+      assertThat(e, matcher);
+    }
   }
 
   /** Tests the LookML writer
@@ -118,6 +138,139 @@ public class LaxTest {
     generateSampleEvents(LaxHandlers.filter(LaxHandlers.logger(list2::add)));
     assertThat(list2, hasSize(list.size()));
     assertThat(list2, hasToString(list.toString()));
+  }
+
+  @Test void testParse() {
+    assertParse("model: m {}",
+        hasToString("[objOpen(model, m),"
+            + " objClose()]"));
+    assertParseThrows("# just a comment",
+        hasToString("java.lang.RuntimeException: "
+            + "net.hydromatic.lookml.parse.ParseException: "
+            + "Encountered \"<EOF>\" at line 1, column 16.\n"
+            + "Was expecting:\n"
+            + "    <IDENTIFIER> ...\n"
+            + "    "));
+    assertParseThrows("abc",
+        hasToString("java.lang.RuntimeException: "
+            + "net.hydromatic.lookml.parse.ParseException: "
+            + "Encountered \"<EOF>\" at line 1, column 3.\n"
+            + "Was expecting:\n"
+            + "    \":\" ...\n"
+            + "    "));
+    assertParse("model: m {}",
+        hasToString("[objOpen(model, m),"
+            + " objClose()]"));
+    assertParse("s: \"a \\\"quoted\\\" string\"",
+        hasToString("[string(s, a \\\"quoted\\\" string)]"));
+    assertParse("p: []",
+        hasToString("[listOpen(p), listClose()]"));
+    assertParse("p: [1]",
+        hasToString("[listOpen(p), number(1), listClose()]"));
+    assertParse("p: [1, true, [2], -3.5]",
+        hasToString("[listOpen(p), number(1), identifier(true),"
+            + " listOpen(), number(2), listClose(),"
+            + " number(-3.5), listClose()]"));
+    assertParse("# begin\n"
+            + "model: m {\n"
+            + "# middle\n"
+            + "} # end",
+        hasToString("[comment(# begin),"
+            + " objOpen(model, m),"
+            + " comment(# middle),"
+            + " objClose(),"
+            + " comment(# end)]"));
+    assertParseThrows("",
+        hasToString("java.lang.RuntimeException: "
+            + "net.hydromatic.lookml.parse.ParseException: "
+            + "Encountered \"<EOF>\" at line 0, column 0.\n"
+            + "Was expecting:\n"
+            + "    <IDENTIFIER> ...\n"
+            + "    "));
+    assertParse("model: m {\n"
+            + "  sql: multi\n"
+            + "     line;;\n"
+            + "}",
+        hasToString("[objOpen(model, m),"
+            + " code(sql,  multi\n"
+            + "     line),"
+            + " objClose()]"));
+    assertParse("model: m {\n"
+            + "  my_list: [\n"
+            + "    # before element 0\n"
+            + "    0,\n"
+            + "    # between elements 0 and 1\n"
+            + "    # another\n"
+            + "    1,\n"
+            + "    2\n"
+            + "    # after element but before comma\n"
+            + "    ,\n"
+            + "    # after comma\n"
+            + "    2\n"
+            + "    # after last element\n"
+            + "  ]\n"
+            + "}",
+        hasToString("["
+            + "objOpen(model, m),"
+            + " listOpen(my_list),"
+            + " comment(# before element 0),"
+            + " number(0),"
+            + " comment(# between elements 0 and 1),"
+            + " comment(# another),"
+            + " number(1),"
+            + " number(2),"
+            + " comment(# after element but before comma),"
+            + " comment(# after comma),"
+            + " number(2),"
+            + " comment(# after last element),"
+            + " listClose(),"
+            + " objClose()"
+            + "]"));
+  }
+
+  /** Parses the example document that occurs in {@code README.md}. */
+  @Test void testParseReadmeExample() {
+    String code = "# Description of the Beatles in Syntactic LookML.\n"
+        + "band: beatles {\n"
+        + "  founded: 1962\n"
+        + "  origin: \"Liverpool\"\n"
+        + "  member: paul {\n"
+        + "    instruments: [\"bass\", \"guitar\", \"vocal\"]\n"
+        + "  }\n"
+        + "  member: john {\n"
+        + "    instruments: [\"guitar\", \"vocal\", \"harmonica\"]\n"
+        + "    lyric: Living is easy with eyes closed\n"
+        + "      Misunderstanding all you see\n"
+        + "      It's getting hard to be someone, but it all works out\n"
+        + "      It doesn't matter much to me ;;\n"
+        + "  }\n"
+        + "  member: george {\n"
+        + "    instruments: [\"guitar\", \"vocal\"]\n"
+        + "  }\n"
+        + "  member: ringo {\n"
+        + "    instruments: [\"drums\", \"vocal\"]\n"
+        + "  }\n"
+        + "}\n";
+    StringWriter sw = new StringWriter();
+    PrintWriter out = new PrintWriter(sw);
+    ObjectHandler h =
+        new ObjectHandler() {
+          @Override public ObjectHandler code(String propertyName,
+              String value) {
+            if (propertyName.equals("lyric")) {
+              out.println(value);
+            }
+            return this;
+          }
+        };
+    LookmlParsers.parse(h, code,
+        LookmlParsers.config()
+            .withCodePropertyNames(Collections.singleton("lyric")));
+    assertThat(sw,
+        hasToString(" Living is easy with eyes closed\n"
+            + "      Misunderstanding all you see\n"
+            + "      It's getting hard to be someone, but it all works out\n"
+            + "      It doesn't matter much to me \n"));
   }
 }
 

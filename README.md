@@ -26,7 +26,165 @@ License.
 
 Compiler toolchain for the LookML language.
 
-# Object model
+## What is LookML?
+
+LookML is a language devised by [Looker](https://cloud.google.com/looker)
+for representing Business Intelligence (BI) models. A Looker BI model
+consists of objects whose types include `explore`, `view`, `dimension`, and
+`measure`; using a BI model, you can easily build complex visualizations, and
+Looker will generate queries in SQL.
+
+### Syntactic LookML
+
+At the heart of LookML is a basic syntax called **Syntactic LookML**.
+Here is an example:
+```
+# Description of the Beatles in Syntactic LookML.
+band: beatles {
+  founded: 1962
+  origin: "Liverpool"
+  member: paul {
+    instruments: ["bass", "guitar", "vocal"]
+  }
+  member: john {
+    instruments: ["guitar", "vocal", "harmonica"]
+    lyric: Living is easy with eyes closed
+      Misunderstanding all you see
+      It's getting hard to be someone, but it all works out
+      It doesn't matter much to me ;;
+  }
+  member: george {
+    instruments: ["guitar", "vocal"]
+  }
+  member: ringo {
+    instruments: ["drums", "vocal"]
+  }
+}
+```
+
+This LookML is **well-formed** because it follows basic syntactic rules such as
+that each open brace `{` is matched with a close brace `}`. But with types such
+as `band` and `member` it clearly does not follow Looker's schema. That's
+because Syntactic LookML has no schema!
+
+(Later, we'll see how you can define a schema, and check it using a schema
+validator. Separating out the schema keeps the language simple, the parser
+efficient, and lets you easily define your own dialect of LookML.)
+
+Here is the syntax of Syntactic LookML in BNF:
+```
+start
+    : property
+    ;
+
+properties
+    : property
+    | properties property
+    |
+    ;
+
+property
+    : IDENTIFIER COLON value
+    | IDENTIFIER COLON IDENTIFIER object
+    | IDENTIFIER COLON object
+    | CODE_IDENTIFIER COLON code DOUBLE_SEMI_COLON
+    ;
+
+value
+    : STRING
+    | NUMBER
+    | IDENTIFIER
+    | list
+    ;
+
+object
+    : OPEN_BRACE properties CLOSE_BRACE
+    ;
+
+list
+    : OPEN_BRACKET CLOSE_BRACKET
+    | OPEN_BRACKET listItems CLOSE_BRACKET
+    | OPEN_BRACKET listItems COMMA CLOSE_BRACKET
+    ;
+
+listItems
+    : listItems COMMA listItem
+    | listItem
+    ;
+
+listItem
+    : value COLON value
+    | value
+```
+
+So:
+ * `# Description of the Beatles in Syntactic LookML.` is a *comment*;
+ * `"Liverpool"` is a *string value*;
+ * `1962` is *number value*;
+ * `["drums", "vocal"]` is a *list value*;
+ * `founded: 1962` is a *number property*;
+ * `lyric: Living is easy` ... `;;` is a *code property*;
+ * `member: ringo { instrument: ["guitar", "vocal"] }`
+   is a *named-object property*.
+ * `band: beatles {` ... `}` is also a named-object property,
+   and also the *root property*.
+
+Technically there are *property definitions* and *property instances*,
+but we can use the word *property* for either, as long as it is clear.
+For example, `instruments` is the name of a property definition (there
+is one definition, and it lives in the schema), and
+`instruments: ["drums", "vocal"]` is one of four instances of the
+`instruments` property in the document.
+
+`founded`, `member`, `lyric`, and `band` are also property
+definitions.
+ * `lyric` is a code property. It is therefore registered with the
+   parser as a `CODE_IDENTIFIER`, which causes the parser to go into
+   a special state, chewing up all text until it reaches a `;;`.
+ * `band` is the root property of the document. In LookML, the root
+   property must be a named object.
+
+`ringo` is an object name. Usually you can only have one instance of each
+property type in an object. But a named-object property can have more than one
+instance, as long as the names are unique.
+
+## Parser and object model
+
+`LaxParser` provides a push-based parser for Syntactic LookML.
+To call it, you supply a string and an `ObjectHandler`.
+The parser will call the appropriate method for each element of the document.
+
+<!-- LaxTest.testParseReadmeExample() is a clone of the following example.
+     Please keep it up to date. -->
+
+For example,
+```
+String code =
+    "band: beatles {\n"
+      + "  founded: 1962\n" // ... rest as above
+      + "}";
+ObjectHandler h =
+    new ObjectHandler() {
+      @Override public ObjectHandler code(String propertyName, String value) {
+        if (propertyName.equals("lyric")) {
+          System.out.println(value);
+        }
+        return this;
+      }
+    };
+LookmlParsers.parse(h, code,
+    LookmlParsers.config()
+        .withCodePropertyNames(Collections.singleton("lyric")));
+```
+prints
+```
+Living is easy with eyes closed
+Misunderstanding all you see
+It's getting hard to be someone, but it all works out
+It doesn't matter much to me
+```
+
+## Object model
 
 The compiler toolchain is organized into an object model
 so that you can easily create and reuse components.
@@ -60,9 +218,9 @@ and use the *LSD loader* to convert it into an instance of
 `LookmlSchema`; you can also (not shown in the diagram)
 create a schema directly using `LookmlSchemas.builder()`.
 
-# Get LookML
+## Get LookML
 
-## From Maven
+### From Maven
 
 Get LookML from
 <a href="https://search.maven.org/#search%7Cga%7C1%7Ca%3Alookml">Maven central</a>:
@@ -75,7 +233,7 @@ Get LookML from
 </dependency>
 ```
 
-## Download and build
+### Download and build
 
 You need Java (8 or higher) and Git.
 
@@ -94,7 +252,7 @@ On Windows, the last line is
 On Java versions less than 11, you should add parameters
 `-Dcheckstyle.version=9.3`.
 
-# More information
+## More information
 
 * License: <a href="LICENSE">Apache License, Version 2.0</a>
 * Author: Julian Hyde
