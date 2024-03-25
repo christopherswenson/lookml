@@ -16,18 +16,10 @@
  * language governing permissions and limitations under the
  * License.
  */
-package net.hydromatic.lookml;
 
 /**
- * LookML main class.
+ * Utilities for implementing LookML.
  */
-public class Lookml {
-  private Lookml() {
-  }
+package net.hydromatic.lookml.util;
 
-  public static void main() {
-    System.out.println("Hello, world!");
-  }
-}
-
-// End Lookml.java
+// End package-info.java

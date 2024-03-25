@@ -55,8 +55,10 @@
 
     <!-- Component and plugin versions, in alphabetical order. -->
     <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
+    <checkerframework.version>3.42.0</checkerframework.version>
     <!-- We support checkstyle 9.3 and higher; 10.0 requires JDK 11 or higher. -->
     <checkstyle.version>10.14.2</checkstyle.version>
+    <errorprone.version>2.26.1</errorprone.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <!-- We support Guava versions 21.0 and higher. -->
     <guava.version>33.1.0-jre</guava.version>
@@ -103,9 +105,19 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <version>${errorprone.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.checkerframework</groupId>
+      <artifactId>checker-qual</artifactId>
+      <version>${checkerframework.version}</version>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
