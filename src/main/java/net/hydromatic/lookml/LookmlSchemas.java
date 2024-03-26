@@ -38,6 +38,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,8 +72,10 @@ public class LookmlSchemas {
     final List<String> errorList;
     ObjectHandler handler = LaxHandlers.build(list::add);
     if (schema != null) {
-      // TODO: validate
       errorList = new ArrayList<>();
+      handler =
+          LaxHandlers.validator(handler, schema,
+              LaxHandlers.errorLogger(errorList::add));
     } else {
       errorList = ImmutableList.of();
     }
@@ -120,6 +123,40 @@ public class LookmlSchemas {
     final ImmutableList.Builder<String> differences = ImmutableList.builder();
     new Comparer(differences::add).equalSchema(schema1, schema2);
     return differences.build();
+  }
+
+  /** Validates that a LookML document contains at least one instance of
+   * every property in a schema.
+   *
+   * <p>It is strongly recommended to have an exhaustive 'example document'
+   * for each schema. This method can be used to check that document. */
+  public static void checkCompleteness(LookmlSchema schema,
+      Consumer<ObjectHandler> parseDocument, List<String> errorList) {
+    final Set<LookmlSchema.Property> propertiesSeen = new LinkedHashSet<>();
+    final PropertyHandler completenessChecker =
+        LaxHandlers.completenessChecker(schema, propertiesSeen::add);
+    final ErrorHandler errorHandler = LaxHandlers.errorLogger(errorList::add);
+    final ObjectHandler validator =
+        LaxHandlers.validator(completenessChecker, schema, errorHandler);
+    parseDocument.accept(validator);
+
+    // Check that there are some properties, and we saw all of them.
+    Set<LookmlSchema.Property> allProperties = new LinkedHashSet<>();
+    schema.objectTypes().values().forEach(objectType ->
+        allProperties.addAll(objectType.properties().values()));
+    Set<LookmlSchema.Property> propertiesNotSeen =
+        new LinkedHashSet<>(allProperties);
+    propertiesNotSeen.removeAll(propertiesSeen);
+    if (allProperties.isEmpty()) {
+      errorList.add("schema has no properties");
+    }
+    if (propertiesSeen.isEmpty()) {
+      errorList.add("example document contained no properties");
+    }
+    if (!propertiesNotSeen.isEmpty()) {
+      propertiesNotSeen.forEach(p ->
+          errorList.add("property did not occur: " + p));
+    }
   }
 
   /** Builder for a {@link LookmlSchema}. */

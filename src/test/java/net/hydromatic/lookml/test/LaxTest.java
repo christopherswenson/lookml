@@ -26,6 +26,8 @@ import net.hydromatic.lookml.ObjectHandler;
 import net.hydromatic.lookml.SchemaLookml;
 import net.hydromatic.lookml.parse.LookmlParsers;
 
+import com.google.common.collect.ImmutableList;
+
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +37,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
+
+import static net.hydromatic.lookml.test.ParseFixture.minus;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
@@ -77,6 +82,18 @@ public class LaxTest {
     } catch (RuntimeException e) {
       assertThat(e, matcher);
     }
+  }
+
+  @Test void testMinus() {
+    final List<Integer> list = ImmutableList.of();
+    final List<Integer> list123 = ImmutableList.of(1, 2, 3);
+    final List<Integer> list1232 = ImmutableList.of(1, 2, 3, 2);
+    final List<Integer> list2 = ImmutableList.of(2);
+    final List<Integer> list13 = ImmutableList.of(1, 3);
+    assertThat(minus(list123, list), hasToString("[1, 2, 3]"));
+    assertThat(minus(list123, list13), hasToString("[2]"));
+    assertThat(minus(list123, list2), hasToString("[1, 3]"));
+    assertThat(minus(list1232, list2), hasToString("[1, 3, 2]"));
   }
 
   /** Tests the LookML writer
@@ -357,6 +374,180 @@ public class LaxTest {
     assertThat(schema.rootProperties(), aMapWithSize(1));
   }
 
+  /** Validates some small LookML documents according to the Mini-LookML
+   * schema. */
+  @Test void testValidateMini() {
+    final LookmlSchema schema = MiniLookml.schema();
+    final ParseFixture f = ParseFixture.of().withSchema(schema);
+    final String s = "dimension: d {x: 1}";
+    ParseFixture.Parsed f2 = f.parse(s);
+    assertThat(f2.errorList,
+        hasToString("[invalidRootProperty(dimension)]"));
+    assertThat("all events should be discarded", f2.list, hasSize(0));
+
+    ParseFixture.Parsed f3 = f.parse("model: {x: 1}");
+    assertThat(f3.errorList,
+        hasToString("[nameRequired(model)]"));
+    assertThat("all events should be discarded", f3.list, hasSize(0));
+
+    final Consumer<String> fn = m -> {
+      ParseFixture.Parsed f4 = f.parse("model: " + m);
+      assertThat(f4.errorList,
+          hasToString("[invalidRootProperty(model)]"));
+      assertThat("all events should be discarded", f4.list, hasSize(0));
+    };
+    fn.accept("1");
+    fn.accept("\"a string\"");
+    fn.accept("yes");
+    fn.accept("inner_join");
+    fn.accept("[]");
+
+    ParseFixture.Parsed f4 = f.parse("model: m {\n"
+        + "  dimension: d {}\n"
+        + "}");
+    assertThat(f4.errorList,
+        hasToString("[invalidPropertyOfParent(dimension, model)]"));
+    assertThat("d events should be discarded", f4.list, hasSize(2));
+    assertThat(f4.list, hasToString("[objOpen(model, m), objClose()]"));
+
+    ParseFixture.Parsed f5 = f.parse("model: m {\n"
+        + "  view: v {\n"
+        + "    drill_fields: true\n"
+        + "    dimension: d {\n"
+        + "      sql: VALUES ;;\n"
+        + "      type: number\n"
+        + "      label: \"a label\"\n"
+        + "      tags: 123\n"
+        + "    }\n"
+        + "    measure: m {\n"
+        + "      sql: VALUES 1;;\n"
+        + "      type: average\n"
+        + "      label: 1\n"
+        + "    }\n"
+        + "    dimension: d2 {\n"
+        + "      type: average\n"
+        + "      primary_key: \"a string\"\n"
+        + "    }\n"
+        + "    bad_object: {\n"
+        + "      type: median\n"
+        + "    }\n"
+        + "  }\n"
+        + "  explore: e {\n"
+        + "    conditionally_filter: {\n"
+        + "      filters: [f1: \"123\", f2: \"abc\"]\n"
+        + "      unless: [f3, f4]\n"
+        + "    }\n"
+        + "  }\n"
+        + "  explore: e2 {\n"
+        + "    conditionally_filter: {\n"
+        + "      bad: true\n"
+        + "      filters: true\n"
+        + "      unless: [\"a\", 1, f3, [2]]\n"
+        + "    }\n"
+        + "  }\n"
+        + "}");
+    assertThat(f5.errorList,
+        hasToString("["
+            + "invalidPropertyType(drill_fields, REF_LIST, REF), "
+            + "invalidPropertyType(tags, STRING_LIST, NUMBER), "
+            + "invalidPropertyType(label, STRING, NUMBER), "
+            + "invalidPropertyType(dimension, type,"
+            + " dimension_field_type, average), "
+            + "invalidPropertyType(primary_key, ENUM, STRING), "
+            + "invalidPropertyOfParent(bad_object, view), "
+            + "invalidPropertyOfParent(bad, conditionally_filter), "
+            + "invalidPropertyType(filters, REF_STRING_MAP, REF), "
+            + "invalidListElement(unless, STRING, REF_LIST), "
+            + "invalidListElement(unless, NUMBER, REF_LIST), "
+            + "invalidListElement(unless, REF_LIST, REF_LIST)"
+            + "]"));
+    final List<String> discardedEvents = f5.discardedEvents();
+    assertThat(discardedEvents, hasSize(15));
+    assertThat(discardedEvents,
+        hasToString("["
+            + "identifier(drill_fields, true), "
+            + "number(tags, 123), "
+            + "number(label, 1), "
+            + "identifier(type, average), "
+            + "string(primary_key, a string), "
+            + "objOpen(bad_object), "
+            + "identifier(type, median), "
+            + "objClose(), "
+            + "identifier(bad, true), "
+            + "identifier(filters, true), "
+            + "string(a), "
+            + "number(1), "
+            + "listOpen(), "
+            + "number(2), "
+            + "listClose()]"));
+  }
+
+  /** Validates a LookML document that contains duplicate elements. */
+  @Test void testValidateDuplicates() {
+    final LookmlSchema schema = MiniLookml.schema();
+    final ParseFixture f0 = ParseFixture.of().withSchema(schema);
+
+    // Valid - no duplicates
+    final String s = "model: m {\n"
+        + "  explore: e1 {}\n"
+        + "  explore: e2 {}\n"
+        + "}";
+    ParseFixture.Parsed f = f0.parse(s);
+    assertThat(f.errorList, empty());
+
+    // Invalid - duplicate explore e1
+    final String s2 = "model: m {\n"
+        + "  explore: e1 {}\n"
+        + "  explore: e2 {}\n"
+        + "  explore: e1 {}\n"
+        + "}";
+    f = f0.parse(s2);
+    assertThat(f.errorList, hasSize(1));
+    assertThat(f.errorList,
+        hasToString("[duplicateNamedProperty(explore, e1)]"));
+    assertThat(f.discardedEvents(), hasSize(2));
+    assertThat(f.discardedEvents(),
+        hasToString("[objOpen(explore, e1), objClose()]"));
+
+    // Invalid - duplicate properties of type string, list, number, boolean,
+    // enum (dimension.type)
+    final String s3 = "model: m {\n"
+        + "  fiscal_month_offset: 3\n"
+        + "  view: v1 {\n"
+        + "    label: \"label 1\"\n"
+        + "    drill_fields: []\n"
+        + "    drill_fields: [f1]\n"
+        + "    label: \"label 2\"\n"
+        + "    dimension: d1{\n"
+        + "      primary_key: true\n"
+        + "      type: date\n"
+        + "      primary_key: true\n"
+        + "      type: tier\n"
+        + "    }\n"
+        + "  }\n"
+        + "  fiscal_month_offset: 2\n"
+        + "}\n";
+    f = f0.parse(s3);
+    assertThat(f.errorList, hasSize(5));
+    assertThat(f.errorList,
+        hasToString("["
+            + "duplicateProperty(drill_fields), "
+            + "duplicateProperty(label), "
+            + "duplicateProperty(primary_key), "
+            + "duplicateProperty(type), "
+            + "duplicateProperty(fiscal_month_offset)]"));
+    assertThat(f.discardedEvents(), hasSize(7));
+    assertThat(f.discardedEvents(),
+        hasToString("["
+            + "listOpen(drill_fields), "
+            + "identifier(f1), "
+            + "listClose(), "
+            + "string(label, label 2), "
+            + "identifier(primary_key, true), "
+            + "identifier(type, tier), "
+            + "number(fiscal_month_offset, 2)]"));
+  }
+
   /** Tests that the schema for Schema-LookML obtained by parsing
    * {@code schema-schema.lkml} is equivalent to the one created by the
    * {@link SchemaLookml#schema()} method.
@@ -386,6 +577,37 @@ public class LaxTest {
     assertThat(LookmlSchemas.equal(schema, miniSchema), is(true));
   }
 
+  /** Tests that the example document for the Mini-LookML schema contains at
+   * least one instance of each property. */
+  @Test void testCheckMiniExampleCompleteness() {
+    final LookmlSchema schema = MiniLookml.schema();
+    final String model = MiniLookml.exampleModel();
+    final List<String> errorList = new ArrayList<>();
+    final LookmlParsers.Config config =
+        LookmlParsers.config()
+            .withCodePropertyNames(schema.codePropertyNames());
+    LookmlSchemas.checkCompleteness(schema,
+        objectHandler -> LookmlParsers.parse(objectHandler, model, config),
+        errorList);
+    assertThat(errorList, empty());
+  }
+
+  /** Builds a model. */
+  @Test void testBuild() {
+    final ParseFixture f0 = ParseFixture.of().withSchema(MiniLookml.schema());
+    ParseFixture.Parsed f1 = f0.parse("model: m {\n"
+        + "  view: v1 {}\n"
+        + "  view: v2 {}\n"
+        + "  explore: e {\n"
+        + "    join: v2 {}"
+        + "  }\n"
+        + "}");
+    assertThat(f1.errorList, empty());
+    ParseFixture.Validated f2 = f1.validate();
+    assertThat(f2.list, empty());
+    assertThat(f2.model, notNullValue());
+  }
+
   /** Parses the example model. */
   @Test void testParseExample() {
     final ParseFixture f0 =
@@ -393,6 +615,32 @@ public class LaxTest {
             .withCodePropertyNames("sql", "sql_on", "sql_table_name");
     ParseFixture.Parsed f1 = f0.parse(MiniLookml.exampleModel());
     assertThat(f1.list, hasSize(62));
+  }
+
+  /** Builds the example model,
+   * which {@link #testCheckMiniExampleCompleteness()}
+   * has proved contains every attribute. */
+  @Test void testBuildExample() {
+    final ParseFixture f0 = ParseFixture.of().withSchema(MiniLookml.schema());
+    ParseFixture.Parsed f1 = f0.parse(MiniLookml.exampleModel());
+    assertThat(f1.errorList, empty());
+    ParseFixture.Validated f2 = f1.validate();
+    assertThat(f2.list, empty());
+    assertThat(f2.model, notNullValue());
+  }
+
+  /** Validates a model. */
+  @Test void testValidate() {
+    final ParseFixture f0 = ParseFixture.of().withSchema(MiniLookml.schema());
+    ParseFixture.Parsed f1 = f0.parse("model: m {\n"
+        + "  view: v1 {}\n"
+        + "  explore: e {\n"
+        + "    view_name: v2"
+        + "  }\n"
+        + "}");
+    assertThat(f1.errorList, empty());
+    ParseFixture.Validated f2 = f1.validate();
+    assertThat(f2.list, empty());
   }
 }
 
