@@ -388,6 +388,9 @@
           <include>NOTICE</include>
         </includes>
       </resource>
+      <resource>
+        <directory>${top.dir}/src/main/resources</directory>
+      </resource>
     </resources>
   </build>
 

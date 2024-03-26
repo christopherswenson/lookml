@@ -22,6 +22,7 @@ import net.hydromatic.lookml.LaxHandlers;
 import net.hydromatic.lookml.ObjectHandler;
 import net.hydromatic.lookml.parse.LookmlParsers;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
 import java.util.ArrayList;
@@ -41,6 +42,12 @@ class ParseFixture {
   /** Creates a ParseFixture. */
   static ParseFixture of() {
     return new ParseFixture(ImmutableSortedSet.of("sql"));
+  }
+
+  /** Returns a ParseFixture that is a copy of this with a given set of code
+   * property names. */
+  ParseFixture withCodePropertyNames(String... codePropertyNames) {
+    return new ParseFixture(ImmutableSet.copyOf(codePropertyNames));
   }
 
   /** Assigns the current LookML string and parses. */

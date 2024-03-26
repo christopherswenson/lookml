@@ -36,14 +36,14 @@ public class LaxHandlers {
    * @param offset Number of spaces to increase indentation each time we enter
    *              a nested object or list
    * @param pretty Whether to pretty-print (with newlines and indentation) */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public static ObjectHandler writer(StringBuilder buf, int offset,
       boolean pretty) {
     final LookmlWriter sink = new LookmlWriter(pretty, buf, offset);
     return build(pairList ->
         // Cast is valid because subclasses of ValueImpl are the only valid
         // implementations of interface Value.
-        sink.propertyList((PairList<String, ValueImpl>) pairList));
+        sink.propertyList((PairList<String, ValueImpl>) (PairList) pairList));
   }
 
   /** Creates a handler that writes each event,
@@ -75,7 +75,7 @@ public class LaxHandlers {
   /** Creates an ObjectHandler that converts events into a document. */
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static ObjectHandler build(
-      Consumer<PairList<String, ? extends Value>> consumer) {
+      Consumer<PairList<String, Value>> consumer) {
     return new ObjectBuilder(
         (Consumer<PairList<String, ValueImpl>>) (Consumer) consumer);
   }

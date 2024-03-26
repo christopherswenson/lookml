@@ -19,7 +19,11 @@
 package net.hydromatic.lookml.test;
 
 import net.hydromatic.lookml.LaxHandlers;
+import net.hydromatic.lookml.LookmlSchema;
+import net.hydromatic.lookml.LookmlSchemas;
+import net.hydromatic.lookml.MiniLookml;
 import net.hydromatic.lookml.ObjectHandler;
+import net.hydromatic.lookml.SchemaLookml;
 import net.hydromatic.lookml.parse.LookmlParsers;
 
 import org.hamcrest.Matcher;
@@ -27,13 +31,20 @@ import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /** Tests for the LookML event-based parser. */
@@ -271,6 +282,117 @@ public class LaxTest {
             + "      Misunderstanding all you see\n"
             + "      It's getting hard to be someone, but it all works out\n"
             + "      It doesn't matter much to me \n"));
+  }
+
+  /** Tests building a simple schema with one enum type. */
+  @Test void testSchemaBuilder() {
+    LookmlSchema s =
+        LookmlSchemas.schemaBuilder()
+            .setName("simple")
+            .addEnum("boolean", "true", "false")
+            .build();
+    assertThat(s.name(), is("simple"));
+    assertThat(s.objectTypes(), anEmptyMap());
+    assertThat(s.enumTypes(), aMapWithSize(1));
+    assertThat(s.enumTypes().get("boolean").allowedValues(),
+        hasToString("[false, true]"));
+  }
+
+  /** Tests building a schema with two enum types and one root object type. */
+  @Test void testSchemaBuilder2() {
+    LookmlSchema s =
+        LookmlSchemas.schemaBuilder()
+            .setName("example")
+            .addEnum("boolean", "true", "false")
+            .addEnum("join_type", "inner", "cross_join", "left_outer")
+            .addNamedObjectProperty("empty_object",
+                LookmlSchemas.ObjectTypeBuilder::build)
+            .addNamedObjectProperty("model",
+                b -> b.addNumberProperty("x")
+                    .addStringProperty("y")
+                    .addEnumProperty("z", "boolean")
+                    .addObjectProperty("empty_object")
+                    .build())
+            .build();
+    assertThat(s.name(), is("example"));
+    assertThat(s.enumTypes(), aMapWithSize(2));
+    assertThat(s.enumTypes().get("boolean").allowedValues(),
+        hasToString("[false, true]"));
+    assertThat(s.enumTypes().get("join_type").allowedValues(),
+        hasToString("[cross_join, inner, left_outer]"));
+    assertThat(s.objectTypes(), aMapWithSize(2));
+    assertThat(s.objectTypes().get("baz"), nullValue());
+    assertThat(s.objectTypes().get("model"), notNullValue());
+    assertThat(s.objectTypes().get("model").properties().keySet(),
+        hasToString("[empty_object, x, y, z]"));
+  }
+
+  /** Tests building a schema where the same property name ("sql") is used for
+   * both code and non-code properties. */
+  @Test void testSchemaBuilderFailsWithMixedCodeProperties() {
+    try {
+      LookmlSchema s =
+          LookmlSchemas.schemaBuilder()
+              .addObjectType("view",
+                  b -> b.addNumberProperty("x")
+                      .addCodeProperty("sql")
+                      .build())
+              .addObjectType("dimension",
+                  b -> b.addNumberProperty("y")
+                      .addStringProperty("sql")
+                      .build())
+              .build();
+      fail("expected error, got " + s);
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(),
+          is("property 'sql' has both code and non-code uses"));
+    }
+  }
+
+  /** Tests building the Mini-LookML schema. */
+  @Test void testSchemaBuilder3() {
+    final LookmlSchema schema = MiniLookml.schema();
+    assertThat(schema.objectTypes(), aMapWithSize(7));
+    assertThat(schema.enumTypes(), aMapWithSize(5));
+    assertThat(schema.rootProperties(), aMapWithSize(1));
+  }
+
+  /** Tests that the schema for Schema-LookML obtained by parsing
+   * {@code schema-schema.lkml} is equivalent to the one created by the
+   * {@link SchemaLookml#schema()} method.
+   *
+   * <p>Also lets the schema-schema validate itself. */
+  @Test void testCompareSchemaSchema() {
+    final URL url = SchemaLookml.getSchemaUrl();
+    final LookmlSchema schema = LookmlSchemas.load(url, null);
+    final LookmlSchema schemaSchema = SchemaLookml.schema();
+    assertThat(LookmlSchemas.compare(schema, schemaSchema), empty());
+    assertThat(LookmlSchemas.equal(schema, schemaSchema), is(true));
+
+    // Use the schema to validate itself.
+    final LookmlSchema schema2 = LookmlSchemas.load(url, schema);
+    assertThat(LookmlSchemas.equal(schema, schema2), is(true));
+  }
+
+  /** Tests that the Mini-LookML schema obtained by parsing
+   * {@code mini-lookml-schema.lkml} is equivalent to the one created by the
+   * {@link MiniLookml#schema()} method. */
+  @Test void testCompareMiniSchema() {
+    final URL url = MiniLookml.getSchemaUrl();
+    final LookmlSchema schema =
+        LookmlSchemas.load(url, SchemaLookml.schema());
+    final LookmlSchema miniSchema = MiniLookml.schema();
+    assertThat(LookmlSchemas.compare(schema, miniSchema), empty());
+    assertThat(LookmlSchemas.equal(schema, miniSchema), is(true));
+  }
+
+  /** Parses the example model. */
+  @Test void testParseExample() {
+    final ParseFixture f0 =
+        ParseFixture.of()
+            .withCodePropertyNames("sql", "sql_on", "sql_table_name");
+    ParseFixture.Parsed f1 = f0.parse(MiniLookml.exampleModel());
+    assertThat(f1.list, hasSize(62));
   }
 }
 
