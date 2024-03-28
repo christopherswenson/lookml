@@ -61,14 +61,28 @@ public class LaxHandlers {
 
   /** Creates an object handler that writes each event,
    * as a string, to a consumer. */
+  public static ObjectHandler logger(Consumer<String> consumer,
+      boolean includePos) {
+    return LoggingObjectHandler.create(consumer, includePos);
+  }
+
+  /** Creates a handler that writes each event,
+   * as a string without position information, to a consumer. */
   public static ObjectHandler logger(Consumer<String> consumer) {
-    return LoggingObjectHandler.create(consumer);
+    return logger(consumer, false);
   }
 
   /** Creates a property handler that writes each event,
    * as a string, to a consumer. */
+  public static PropertyHandler loggerTyped(Consumer<String> consumer,
+      boolean includePos) {
+    return LoggingPropertyHandler.root(consumer, includePos);
+  }
+
+  /** Creates a handler that writes each event,
+   * as a string, to a consumer. */
   public static PropertyHandler loggerTyped(Consumer<String> consumer) {
-    return LoggingPropertyHandler.root(consumer);
+    return loggerTyped(consumer, false);
   }
 
   /** Creates a handler that writes each error event, as a string,
@@ -148,50 +162,54 @@ public class LaxHandlers {
       this.onClose = onClose;
     }
 
-    @Override public ObjectBuilder comment(String comment) {
+    @Override public ObjectBuilder comment(Pos pos, String comment) {
       // ignore comment
       return this;
     }
 
-    @Override public ObjectBuilder number(String propertyName, Number value) {
+    @Override public ObjectBuilder number(Pos pos, String propertyName,
+        Number value) {
       properties.add(propertyName, Values.number(value));
       return this;
     }
 
-    @Override public ObjectBuilder string(String propertyName, String value) {
+    @Override public ObjectBuilder string(Pos pos, String propertyName,
+        String value) {
       properties.add(propertyName, Values.string(value));
       return this;
     }
 
-    @Override public ObjectBuilder identifier(String propertyName,
+    @Override public ObjectBuilder identifier(Pos pos, String propertyName,
         String value) {
       properties.add(propertyName, Values.identifier(value));
       return this;
     }
 
-    @Override public ObjectBuilder code(String propertyName, String value) {
+    @Override public ObjectBuilder code(Pos pos, String propertyName,
+        String value) {
       properties.add(propertyName, Values.code(value));
       return this;
     }
 
-    @Override public ListBuilder listOpen(String propertyName) {
+    @Override public ListBuilder listOpen(Pos pos, String propertyName) {
       return new ListBuilder(list ->
           properties.add(propertyName, Values.list(list)));
     }
 
-    @Override public ObjectHandler objOpen(String propertyName, String name) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName,
+        String name) {
       return new ObjectBuilder(properties ->
           this.properties.add(propertyName,
               Values.namedObject(name, properties)));
     }
 
-    @Override public ObjectHandler objOpen(String propertyName) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName) {
       return new ObjectBuilder(properties ->
           this.properties.add(propertyName,
               Values.object(properties)));
     }
 
-    @Override public void close() {
+    @Override public void close(Pos pos) {
       onClose.accept(properties);
     }
   }
@@ -207,36 +225,36 @@ public class LaxHandlers {
       this.onClose = onClose;
     }
 
-    @Override public ListHandler string(String value) {
+    @Override public ListHandler string(Pos pos, String value) {
       list.add(Values.string(value));
       return this;
     }
 
-    @Override public ListHandler number(Number value) {
+    @Override public ListHandler number(Pos pos, Number value) {
       list.add(Values.number(value));
       return this;
     }
 
-    @Override public ListHandler identifier(String value) {
+    @Override public ListHandler identifier(Pos pos, String value) {
       list.add(Values.identifier(value));
       return this;
     }
 
-    @Override public ListHandler pair(String ref, String identifier) {
+    @Override public ListHandler pair(Pos pos, String ref, String identifier) {
       list.add(Values.pair(ref, identifier));
       return this;
     }
 
-    @Override public ListHandler comment(String comment) {
+    @Override public ListHandler comment(Pos pos, String comment) {
       // Ignore the comment
       return this;
     }
 
-    @Override public ListHandler listOpen() {
+    @Override public ListHandler listOpen(Pos pos) {
       return new ListBuilder(list -> this.list.add(Values.list(list)));
     }
 
-    @Override public void close() {
+    @Override public void close(Pos pos) {
       onClose.accept(list);
     }
   }
@@ -268,25 +286,27 @@ public class LaxHandlers {
       this.consumer = consumer;
     }
 
-    @Override public PropertyHandler property(LookmlSchema.Property property,
-        Object value) {
+    @Override public PropertyHandler property(Pos pos,
+        LookmlSchema.Property property, Object value) {
       switch (property.type()) {
       case STRING:
-        consumer.string(property.name(), (String) value);
+        consumer.string(pos, property.name(), (String) value);
         break;
       case CODE:
-        consumer.code(property.name(), (String) value);
+        consumer.code(pos, property.name(), (String) value);
         break;
       case NUMBER:
-        consumer.number(property.name(), (Number) value);
+        consumer.number(pos, property.name(), (Number) value);
         break;
       case ENUM:
       case REF:
-        consumer.identifier(property.name(), (String) value);
+        consumer.identifier(pos, property.name(), (String) value);
         break;
       case REF_LIST:
-        final ListHandler listHandler = consumer.listOpen(property.name());
-        ((List<String>) value).forEach(listHandler::identifier);
+        // It's not true that each element has the same position, but it's all
+        // the information we have.
+        final ListHandler listHandler = consumer.listOpen(pos, property.name());
+        ((List<String>) value).forEach(v -> listHandler.identifier(pos, v));
         break;
       default:
         throw new AssertionError(property.type());
@@ -294,23 +314,26 @@ public class LaxHandlers {
       return this;
     }
 
-    @Override public ListHandler listOpen(LookmlSchema.Property property) {
-      return consumer.listOpen(property.name());
+    @Override public ListHandler listOpen(Pos pos,
+        LookmlSchema.Property property) {
+      return consumer.listOpen(pos, property.name());
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property) {
-      final ObjectHandler subConsumer = consumer.objOpen(property.name());
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property) {
+      final ObjectHandler subConsumer = consumer.objOpen(pos, property.name());
       return new UntypingHandler(subConsumer);
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property,
-        String name) {
-      final ObjectHandler subConsumer = consumer.objOpen(property.name(), name);
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property, String name) {
+      final ObjectHandler subConsumer =
+          consumer.objOpen(pos, property.name(), name);
       return new UntypingHandler(subConsumer);
     }
 
-    @Override public void close() {
-      consumer.close();
+    @Override public void close(Pos pos) {
+      consumer.close(pos);
     }
   }
 
@@ -324,29 +347,31 @@ public class LaxHandlers {
       this.propertiesSeen = propertiesSeen;
     }
 
-    @Override public PropertyHandler property(LookmlSchema.Property property,
-        Object value) {
+    @Override public PropertyHandler property(Pos pos,
+        LookmlSchema.Property property, Object value) {
       propertiesSeen.add(property);
       return this;
     }
 
-    @Override public ListHandler listOpen(LookmlSchema.Property property) {
+    @Override public ListHandler listOpen(Pos pos,
+        LookmlSchema.Property property) {
       propertiesSeen.add(property);
       return nullListHandler(); // we don't care about list elements
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property) {
       propertiesSeen.add(property);
       return new CompletenessChecker(propertiesSeen);
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property,
-        String name) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property, String name) {
       propertiesSeen.add(property);
       return new CompletenessChecker(propertiesSeen);
     }
 
-    @Override public void close() {
+    @Override public void close(Pos pos) {
       // nothing to do
     }
   }
@@ -364,7 +389,7 @@ public class LaxHandlers {
       this.propertiesSeenConsumer = propertiesSeenConsumer;
     }
 
-    @Override public void close() {
+    @Override public void close(Pos pos) {
       propertiesSeen.forEach(propertiesSeenConsumer);
     }
   }

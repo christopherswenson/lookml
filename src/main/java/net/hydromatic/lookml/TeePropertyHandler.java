@@ -30,36 +30,38 @@ class TeePropertyHandler implements PropertyHandler {
     this.consumers = consumers;
   }
 
-  @Override public PropertyHandler property(LookmlSchema.Property property,
-      Object value) {
-    consumers.forEach(c -> c.property(property, value));
+  @Override public PropertyHandler property(Pos pos,
+      LookmlSchema.Property property, Object value) {
+    consumers.forEach(c -> c.property(pos, property, value));
     return this;
   }
 
-  @Override public ListHandler listOpen(LookmlSchema.Property property) {
+  @Override public ListHandler listOpen(Pos pos,
+      LookmlSchema.Property property) {
     final ImmutableList.Builder<ListHandler> newConsumers =
         ImmutableList.builder();
-    consumers.forEach(c -> newConsumers.add(c.listOpen(property)));
+    consumers.forEach(c -> newConsumers.add(c.listOpen(pos, property)));
     return new TeeListHandler(newConsumers.build());
   }
 
-  @Override public PropertyHandler objOpen(LookmlSchema.Property property) {
+  @Override public PropertyHandler objOpen(Pos pos,
+      LookmlSchema.Property property) {
     final ImmutableList.Builder<PropertyHandler> newConsumers =
         ImmutableList.builder();
-    consumers.forEach(c -> newConsumers.add(c.objOpen(property)));
+    consumers.forEach(c -> newConsumers.add(c.objOpen(pos, property)));
     return new TeePropertyHandler(newConsumers.build());
   }
 
-  @Override public PropertyHandler objOpen(LookmlSchema.Property property,
-      String name) {
+  @Override public PropertyHandler objOpen(Pos pos,
+      LookmlSchema.Property property, String name) {
     final ImmutableList.Builder<PropertyHandler> newConsumers =
         ImmutableList.builder();
-    consumers.forEach(c -> newConsumers.add(c.objOpen(property, name)));
+    consumers.forEach(c -> newConsumers.add(c.objOpen(pos, property, name)));
     return new TeePropertyHandler(newConsumers.build());
   }
 
-  @Override public void close() {
-    consumers.forEach(PropertyHandler::close);
+  @Override public void close(Pos pos) {
+    consumers.forEach(c -> c.close(pos));
   }
 }
 

@@ -38,38 +38,38 @@ public class FilterListHandler implements ListHandler {
     this.consumer = requireNonNull(consumer);
   }
 
-  @Override public ListHandler comment(String comment) {
-    consumer.comment(comment);
+  @Override public ListHandler comment(Pos pos, String comment) {
+    consumer.comment(pos, comment);
     return this;
   }
 
-  @Override public ListHandler string(String value) {
-    consumer.string(value);
+  @Override public ListHandler string(Pos pos, String value) {
+    consumer.string(pos, value);
     return this;
   }
 
-  @Override public ListHandler number(Number value) {
-    consumer.number(value);
+  @Override public ListHandler number(Pos pos, Number value) {
+    consumer.number(pos, value);
     return this;
   }
 
-  @Override public ListHandler identifier(String value) {
-    consumer.identifier(value);
+  @Override public ListHandler identifier(Pos pos, String value) {
+    consumer.identifier(pos, value);
     return this;
   }
 
-  @Override public ListHandler pair(String ref, String identifier) {
-    consumer.pair(ref, identifier);
+  @Override public ListHandler pair(Pos pos, String ref, String identifier) {
+    consumer.pair(pos, ref, identifier);
     return this;
   }
 
-  @Override public ListHandler listOpen() {
-    final ListHandler listHandler = consumer.listOpen();
+  @Override public ListHandler listOpen(Pos pos) {
+    final ListHandler listHandler = consumer.listOpen(pos);
     return new FilterListHandler(listHandler);
   }
 
-  @Override public void close() {
-    consumer.close();
+  @Override public void close(Pos pos) {
+    consumer.close(pos);
   }
 }
 

@@ -23,6 +23,7 @@ import net.hydromatic.lookml.LookmlSchema;
 import net.hydromatic.lookml.LookmlSchemas;
 import net.hydromatic.lookml.MiniLookml;
 import net.hydromatic.lookml.ObjectHandler;
+import net.hydromatic.lookml.Pos;
 import net.hydromatic.lookml.SchemaLookml;
 import net.hydromatic.lookml.Source;
 import net.hydromatic.lookml.Sources;
@@ -57,18 +58,19 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class LaxTest {
 
   private static void generateSampleEvents(ObjectHandler h) {
-    h.obj("model", "m", h1 ->
-            h1.number("n", 1)
-                .string("s", "hello")
-                .identifier("b", "true")
-                .code("code", "VALUES 1")
-                .list("list", h2 ->
-                    h2.identifier("asc")
-                        .number(-2.5)
-                        .string("abc")
-                        .list(h3 -> h3.string("singleton")))
-                .list("emptyList", h2 -> {}))
-        .close();
+    Pos p = Pos.ZERO;
+    h.obj(p, "model", "m", h1 ->
+            h1.number(p, "n", 1)
+                .string(p, "s", "hello")
+                .identifier(p, "b", "true")
+                .code(p, "code", "VALUES 1")
+                .list(p, "list", h2 ->
+                    h2.identifier(p, "asc")
+                        .number(p, -2.5)
+                        .string(p, "abc")
+                        .list(p, h3 -> h3.string(p, "singleton")))
+                .list(p, "emptyList", h2 -> {}))
+        .close(p);
   }
 
   private static void assertParse(String s, Matcher<List<String>> matcher) {
@@ -284,7 +286,7 @@ public class LaxTest {
     PrintWriter out = new PrintWriter(sw);
     ObjectHandler h =
         new ObjectHandler() {
-          @Override public ObjectHandler code(String propertyName,
+          @Override public ObjectHandler code(Pos pos, String propertyName,
               String value) {
             if (propertyName.equals("lyric")) {
               out.println(value);
@@ -301,6 +303,50 @@ public class LaxTest {
             + "      Misunderstanding all you see\n"
             + "      It's getting hard to be someone, but it all works out\n"
             + "      It doesn't matter much to me \n"));
+  }
+
+  @Test void testParsePosition() {
+    checkParsePosition(false);
+    checkParsePosition(true);
+  }
+
+  private void checkParsePosition(boolean withSchema) {
+    ParseFixture f = ParseFixture.of();
+    if (withSchema) {
+      f = f.withSchema(MiniLookml.schema());
+    }
+    ParseFixture.Parsed parsed =
+        f.withIncludePos(true)
+            .parse("model: m {\n"
+                + "  view: v {\n"
+                + "  # a comment\n"
+                + "    drill_fields: [f, g]\n"
+                + "  }\n"
+                + "}\n");
+    final String expectedToString;
+    if (withSchema) {
+      expectedToString = "["
+          + "objOpen(model, NAMED_OBJECT, m) at 1.1-1.11, "
+          + "objOpen(view, NAMED_OBJECT, v) at 2.3-2.12, "
+          + "listOpen(drill_fields, REF_LIST) at 4.5-4.20, "
+          + "identifier(f) at 4.20, "
+          + "identifier(g) at 4.23, "
+          + "listClose() at 4.24, "
+          + "objClose() at 5.3, "
+          + "objClose() at 6.1]";
+    } else {
+      expectedToString = "["
+          + "objOpen(model, m) at 1.1-1.11, "
+          + "objOpen(view, v) at 2.3-2.12, "
+          + "comment(# a comment) at 3.3-3.14, "
+          + "listOpen(drill_fields) at 4.5-4.20, "
+          + "identifier(f) at 4.20, "
+          + "identifier(g) at 4.23, "
+          + "listClose() at 4.24, "
+          + "objClose() at 5.3, "
+          + "objClose() at 6.1]";
+    }
+    assertThat(parsed.list, hasToString(expectedToString));
   }
 
   /** Tests building a simple schema with one enum type. */
@@ -409,8 +455,8 @@ public class LaxTest {
         + "}");
     assertThat(f4.errorList,
         hasToString("[invalidPropertyOfParent(dimension, model)]"));
-    assertThat("d events should be discarded", f4.list, hasSize(2));
-    assertThat(f4.list, hasToString("[objOpen(model, m), objClose()]"));
+    assertThat("d events should be discarded", f4.list2, hasSize(2));
+    assertThat(f4.list2, hasToString("[objOpen(model, m), objClose()]"));
 
     ParseFixture.Parsed f5 = f.parse("model: m {\n"
         + "  view: v {\n"

@@ -165,7 +165,8 @@ String code =
       + "}";
 ObjectHandler h =
     new ObjectHandler() {
-      @Override public ObjectHandler code(String propertyName, String value) {
+      @Override public ObjectHandler code(Pos pos,
+          String propertyName, String value) {
         if (propertyName.equals("lyric")) {
           System.out.println(value);
         }

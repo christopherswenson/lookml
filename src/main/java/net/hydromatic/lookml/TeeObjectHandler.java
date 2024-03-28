@@ -30,61 +30,61 @@ class TeeObjectHandler implements ObjectHandler {
     this.consumers = consumers;
   }
 
-  @Override public ObjectHandler comment(String comment) {
-    consumers.forEach(c -> c.comment(comment));
+  @Override public ObjectHandler comment(Pos pos, String comment) {
+    consumers.forEach(c -> c.comment(pos, comment));
     return this;
   }
 
-  @Override public ObjectHandler number(String propertyName,
+  @Override public ObjectHandler number(Pos pos, String propertyName,
       Number value) {
-    consumers.forEach(c -> c.number(propertyName, value));
+    consumers.forEach(c -> c.number(pos, propertyName, value));
     return this;
   }
 
-  @Override public ObjectHandler string(String propertyName,
+  @Override public ObjectHandler string(Pos pos, String propertyName,
       String value) {
-    consumers.forEach(c -> c.string(propertyName, value));
+    consumers.forEach(c -> c.string(pos, propertyName, value));
     return this;
   }
 
-  @Override public ObjectHandler identifier(String propertyName,
+  @Override public ObjectHandler identifier(Pos pos, String propertyName,
       String value) {
-    consumers.forEach(c -> c.identifier(propertyName, value));
+    consumers.forEach(c -> c.identifier(pos, propertyName, value));
     return this;
   }
 
-  @Override public ObjectHandler code(String propertyName,
+  @Override public ObjectHandler code(Pos pos, String propertyName,
       String value) {
-    consumers.forEach(c -> c.code(propertyName, value));
+    consumers.forEach(c -> c.code(pos, propertyName, value));
     return this;
   }
 
-  @Override public ListHandler listOpen(String propertyName) {
+  @Override public ListHandler listOpen(Pos pos, String propertyName) {
     final ImmutableList.Builder<ListHandler> newConsumers =
         ImmutableList.builder();
-    consumers.forEach(c -> newConsumers.add(c.listOpen(propertyName)));
+    consumers.forEach(c -> newConsumers.add(c.listOpen(pos, propertyName)));
     return new TeeListHandler(newConsumers.build());
   }
 
-  @Override public ObjectHandler objOpen(String propertyName) {
+  @Override public ObjectHandler objOpen(Pos pos, String propertyName) {
     final ImmutableList.Builder<ObjectHandler> newConsumers =
         ImmutableList.builder();
     consumers.forEach(c ->
-        newConsumers.add(c.objOpen(propertyName)));
+        newConsumers.add(c.objOpen(pos, propertyName)));
     return new TeeObjectHandler(newConsumers.build());
   }
 
-  @Override public ObjectHandler objOpen(String propertyName,
+  @Override public ObjectHandler objOpen(Pos pos, String propertyName,
       String name) {
     final ImmutableList.Builder<ObjectHandler> newConsumers =
         ImmutableList.builder();
     consumers.forEach(c ->
-        newConsumers.add(c.objOpen(propertyName, name)));
+        newConsumers.add(c.objOpen(pos, propertyName, name)));
     return new TeeObjectHandler(newConsumers.build());
   }
 
-  @Override public void close() {
-    consumers.forEach(ObjectHandler::close);
+  @Override public void close(Pos pos) {
+    consumers.forEach(c -> c.close(pos));
   }
 }
 

@@ -28,40 +28,40 @@ class TeeListHandler implements ListHandler {
     this.consumers = consumers;
   }
 
-  @Override public ListHandler string(String value) {
-    consumers.forEach(c -> c.string(value));
+  @Override public ListHandler string(Pos pos, String value) {
+    consumers.forEach(c -> c.string(pos, value));
     return this;
   }
 
-  @Override public ListHandler number(Number value) {
-    consumers.forEach(c -> c.number(value));
+  @Override public ListHandler number(Pos pos, Number value) {
+    consumers.forEach(c -> c.number(pos, value));
     return this;
   }
 
-  @Override public ListHandler identifier(String value) {
-    consumers.forEach(c -> c.identifier(value));
+  @Override public ListHandler identifier(Pos pos, String value) {
+    consumers.forEach(c -> c.identifier(pos, value));
     return this;
   }
 
-  @Override public ListHandler pair(String ref, String identifier) {
-    consumers.forEach(c -> c.pair(ref, identifier));
+  @Override public ListHandler pair(Pos pos, String ref, String identifier) {
+    consumers.forEach(c -> c.pair(pos, ref, identifier));
     return this;
   }
 
-  @Override public ListHandler comment(String comment) {
-    consumers.forEach(c -> c.comment(comment));
+  @Override public ListHandler comment(Pos pos, String comment) {
+    consumers.forEach(c -> c.comment(pos, comment));
     return this;
   }
 
-  @Override public ListHandler listOpen() {
+  @Override public ListHandler listOpen(Pos pos) {
     final ImmutableList.Builder<ListHandler> newConsumers =
         ImmutableList.builder();
-    consumers.forEach(c -> newConsumers.add(c.listOpen()));
+    consumers.forEach(c -> newConsumers.add(c.listOpen(pos)));
     return new TeeListHandler(newConsumers.build());
   }
 
-  @Override public void close() {
-    consumers.forEach(ListHandler::close);
+  @Override public void close(Pos pos) {
+    consumers.forEach(c -> c.close(pos));
   }
 }
 

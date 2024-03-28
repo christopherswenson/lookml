@@ -20,6 +20,8 @@ package net.hydromatic.lookml;
 
 import java.util.function.Consumer;
 
+import static net.hydromatic.lookml.LoggingObjectHandler.appendPos;
+
 /** Implementation of {@link ListHandler}
  * that logs events, as strings, to a consumer.
  *
@@ -29,43 +31,60 @@ import java.util.function.Consumer;
  * interfaces. */
 class LoggingListHandler implements ListHandler {
   private final Consumer<String> consumer;
+  private final boolean includePos;
 
-  LoggingListHandler(Consumer<String> consumer) {
+  LoggingListHandler(Consumer<String> consumer, boolean includePos) {
     this.consumer = consumer;
+    this.includePos = includePos;
   }
 
-  @Override public ListHandler string(String value) {
-    consumer.accept("string(" + value + ")");
+  @Override public ListHandler string(Pos pos, String value) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("string(").append(value).append(")")));
     return this;
   }
 
-  @Override public ListHandler number(Number value) {
-    consumer.accept("number(" + value + ")");
+  @Override public ListHandler number(Pos pos, Number value) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("number(").append(value).append(")")));
     return this;
   }
 
-  @Override public ListHandler identifier(String value) {
-    consumer.accept("identifier(" + value + ")");
+  @Override public ListHandler identifier(Pos pos, String value) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("identifier(").append(value).append(")")));
     return this;
   }
 
-  @Override public ListHandler pair(String ref, String identifier) {
-    consumer.accept("pair(" + ref + ", " + identifier + ")");
+  @Override public ListHandler pair(Pos pos, String ref, String identifier) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("pair(").append(ref)
+                .append(", ").append(identifier).append(")")));
     return this;
   }
 
-  @Override public ListHandler comment(String comment) {
-    consumer.accept("comment(" + comment + ")");
+  @Override public ListHandler comment(Pos pos, String comment) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("comment(").append(comment).append(")")));
     return this;
   }
 
-  @Override public ListHandler listOpen() {
-    consumer.accept("listOpen()");
+  @Override public ListHandler listOpen(Pos pos) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("listOpen()")));
     return this;
   }
 
-  @Override public void close() {
-    consumer.accept("listClose()");
+  @Override public void close(Pos pos) {
+    consumer.accept(
+        appendPos(pos, includePos,
+            new StringBuilder("listClose()")));
   }
 }
 

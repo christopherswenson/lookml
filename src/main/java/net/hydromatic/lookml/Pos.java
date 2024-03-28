@@ -57,8 +57,14 @@ public class Pos {
     return new Pos(source, start.left, start.right, end.left, end.right);
   }
 
+  /** Creates a Builder. */
+  public static Builder builder(Source source, int startLine, int startColumn,
+      int endLine, int endColumn) {
+    return new Builder(source, startLine, startColumn, endLine, endColumn);
+  }
+
   @Override public int hashCode() {
-    return hash(startLine, startColumn, endLine, endColumn);
+    return hash(startLine, startColumn, endLine, endColumn, source);
   }
 
   @Override public boolean equals(Object o) {
@@ -67,7 +73,8 @@ public class Pos {
         && this.startLine == ((Pos) o).startLine
         && this.startColumn == ((Pos) o).startColumn
         && this.endLine == ((Pos) o).endLine
-        && this.endColumn == ((Pos) o).endColumn;
+        && this.endColumn == ((Pos) o).endColumn
+        && this.source.equals(((Pos) o).source);
   }
 
   @Override public String toString() {
@@ -79,6 +86,10 @@ public class Pos {
     if (buf.length() > 0) {
       buf.append(':');
     }
+    return describeTo2(buf);
+  }
+
+  public StringBuilder describeTo2(StringBuilder buf) {
     buf.append(startLine)
         .append('.')
         .append(startColumn);
@@ -103,7 +114,7 @@ public class Pos {
     return sum_(list);
   }
 
-  public static <E> Pos sum(Iterable<E> elements, Function<E, Pos> fn) {
+  public static <E> Pos union(Iterable<E> elements, Function<E, Pos> fn) {
     //noinspection StaticPseudoFunctionalStyleMethod
     return sum(Iterables.transform(elements, fn::apply));
   }
@@ -239,6 +250,39 @@ public class Pos {
 
     @Override public int hashCode() {
       return hash(left, right);
+    }
+  }
+
+  /** Mutable builder that creates a Pos. */
+  public static class Builder {
+    private final Source source;
+    private int startLine;
+    private int startColumn;
+    private int endLine;
+    private int endColumn;
+
+    /** Creates a Builder. */
+    private Builder(Source source, int startLine, int startColumn,
+        int endLine, int endColumn) {
+      this.source = source;
+      this.startLine = startLine;
+      this.startColumn = startColumn;
+      this.endLine = endLine;
+      this.endColumn = endColumn;
+    }
+
+    /** Builds a Pos. */
+    public Pos build() {
+      return new Pos(source, startLine, startColumn, endLine, endColumn);
+    }
+
+    /** Extends the end of the position being built. */
+    public void union(int endLine, int endColumn) {
+      if (endLine > this.endLine
+          || endLine == this.endLine && endColumn > this.endColumn) {
+        this.endLine = endLine;
+        this.endColumn = endColumn;
+      }
     }
   }
 }

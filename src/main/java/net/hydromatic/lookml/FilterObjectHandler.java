@@ -37,48 +37,54 @@ public class FilterObjectHandler implements ObjectHandler {
     this.consumer = requireNonNull(consumer);
   }
 
-  @Override public ObjectHandler comment(String comment) {
-    consumer.comment(comment);
+  @Override public ObjectHandler comment(Pos pos, String comment) {
+    consumer.comment(pos, comment);
     return this;
   }
 
-  @Override public ObjectHandler number(String propertyName, Number value) {
-    consumer.number(propertyName, value);
+  @Override public ObjectHandler number(Pos pos, String propertyName,
+      Number value) {
+    consumer.number(pos, propertyName, value);
     return this;
   }
 
-  @Override public ObjectHandler string(String propertyName, String value) {
-    consumer.string(propertyName, value);
+  @Override public ObjectHandler string(Pos pos, String propertyName,
+      String value) {
+    consumer.string(pos, propertyName, value);
     return this;
   }
 
-  @Override public ObjectHandler identifier(String propertyName, String value) {
-    consumer.identifier(propertyName, value);
+  @Override public ObjectHandler identifier(Pos pos, String propertyName,
+      String value) {
+    consumer.identifier(pos, propertyName, value);
     return this;
   }
 
-  @Override public ObjectHandler code(String propertyName, String value) {
-    consumer.code(propertyName, value);
+  @Override public ObjectHandler code(Pos pos, String propertyName,
+      String value) {
+    consumer.code(pos, propertyName, value);
     return this;
   }
 
-  @Override public ListHandler listOpen(String propertyName) {
-    final ListHandler listHandler = consumer.listOpen(propertyName);
+  @Override public ListHandler listOpen(Pos pos, String propertyName) {
+    final ListHandler listHandler = consumer.listOpen(pos, propertyName);
     return new FilterListHandler(listHandler);
   }
 
-  @Override public ObjectHandler objOpen(String propertyName) {
-    final ObjectHandler objectHandler = consumer.objOpen(propertyName);
+  @Override public ObjectHandler objOpen(Pos pos, String propertyName) {
+    final ObjectHandler objectHandler = consumer.objOpen(pos, propertyName);
     return new FilterObjectHandler(objectHandler);
   }
 
-  @Override public ObjectHandler objOpen(String propertyName, String name) {
-    final ObjectHandler objectHandler = consumer.objOpen(propertyName, name);
+  @Override public ObjectHandler objOpen(Pos pos, String propertyName,
+      String name) {
+    final ObjectHandler objectHandler =
+        consumer.objOpen(pos, propertyName, name);
     return new FilterObjectHandler(objectHandler);
   }
 
-  @Override public void close() {
-    consumer.close();
+  @Override public void close(Pos pos) {
+    consumer.close(pos);
   }
 }
 

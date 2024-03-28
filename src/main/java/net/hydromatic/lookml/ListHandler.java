@@ -27,35 +27,35 @@ public interface ListHandler {
   /** Adds a comment to this list.
    *
    * <p>The default implementation ignores the comment. */
-  default ListHandler comment(String comment) {
+  default ListHandler comment(Pos pos, String comment) {
     return this;
   }
 
   /** Adds a string to this list.
    *
    * <p>The default implementation ignores the string. */
-  default ListHandler string(String value) {
+  default ListHandler string(Pos pos, String value) {
     return this;
   }
 
   /** Adds a number to this list.
    *
    * <p>The default implementation ignores the number. */
-  default ListHandler number(Number value) {
+  default ListHandler number(Pos pos, Number value) {
     return this;
   }
 
   /** Adds an identifier to this list.
    *
    * <p>The default implementation ignores the identifier. */
-  default ListHandler identifier(String value) {
+  default ListHandler identifier(Pos pos, String value) {
     return this;
   }
 
   /** Adds a string-identifier pair to this list.
    *
    * <p>The default implementation ignores the pair. */
-  default ListHandler pair(String ref, String identifier) {
+  default ListHandler pair(Pos pos, String ref, String identifier) {
     return this;
   }
 
@@ -68,24 +68,25 @@ public interface ListHandler {
    *
    * <p>The default implementation returns a list-handler that ignores
    * the contents of the list. */
-  default ListHandler listOpen() {
+  default ListHandler listOpen(Pos pos) {
     return LaxHandlers.nullListHandler();
   }
 
   /** Starts and ends a list item whose value is a list.
    *
-   * <p>Unlike {@link #listOpen()}, always returns this {@code ListHandler}. */
-  default ListHandler list(Consumer<ListHandler> consumer) {
-    ListHandler h = listOpen();
+   * <p>Unlike {@link #listOpen(Pos)}, always returns this
+   * {@code ListHandler}. */
+  default ListHandler list(Pos pos, Consumer<ListHandler> consumer) {
+    ListHandler h = listOpen(pos);
     consumer.accept(h);
-    h.close();
+    h.close(pos);
     return this;
   }
 
   /** Finishes this list.
    *
    * <p>The default implementation does nothing. */
-  default void close() {
+  default void close(Pos pos) {
   }
 }
 

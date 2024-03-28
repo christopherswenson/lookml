@@ -265,28 +265,30 @@ public class MiniLookml {
       this.nodeBuilder = nodeBuilder;
     }
 
-    @Override public PropertyHandler property(LookmlSchema.Property property,
-        Object value) {
+    @Override public PropertyHandler property(Pos pos,
+        LookmlSchema.Property property, Object value) {
       nodeBuilder.accept(property.name(), value);
       return this;
     }
 
-    @Override public ListHandler listOpen(LookmlSchema.Property property) {
+    @Override public ListHandler listOpen(Pos pos,
+        LookmlSchema.Property property) {
       return new LaxHandlers.ListBuilder(list ->
           nodeBuilder.accept(property.name(), list));
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property) {
       return objOpen_(root, this, property, "");
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property,
-        String name) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property, String name) {
       return objOpen_(root, this, property, name);
     }
 
-    @Override public void close() {
-      parentPropertyHandler.property(property, nodeBuilder.build());
+    @Override public void close(Pos pos) {
+      parentPropertyHandler.property(pos, property, nodeBuilder.build());
     }
   }
 
@@ -302,26 +304,28 @@ public class MiniLookml {
       this.template = template;
     }
 
-    @Override public PropertyHandler property(LookmlSchema.Property property,
-        Object value) {
+    @Override public PropertyHandler property(Pos pos,
+        LookmlSchema.Property property, Object value) {
       consumer.accept(property.name(),  value);
       return this;
     }
 
-    @Override public ListHandler listOpen(LookmlSchema.Property property) {
+    @Override public ListHandler listOpen(Pos pos,
+        LookmlSchema.Property property) {
       throw new UnsupportedOperationException();
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property) {
       return objOpen_(this, this, property, "");
     }
 
-    @Override public PropertyHandler objOpen(LookmlSchema.Property property,
-        String name) {
+    @Override public PropertyHandler objOpen(Pos pos,
+        LookmlSchema.Property property, String name) {
       return objOpen_(this, this, property, name);
     }
 
-    @Override public void close() {
+    @Override public void close(Pos pos) {
     }
   }
 
@@ -423,7 +427,8 @@ public class MiniLookml {
         measures.put(measure.name, measure);
         break;
       case "drill_fields":
-        ((List<Values.StringValue>) value).forEach(s -> drillFields.add(s.s));
+        ((List<Values.IdentifierValue>) value)
+            .forEach(s -> drillFields.add(s.id));
         break;
       default:
         throw new IllegalArgumentException("unknown property " + key);

@@ -69,11 +69,11 @@ abstract class ValidatingHandler implements ObjectHandler {
         && type == LookmlSchema.Type.REF;
   }
 
-  @Override public void close() {
-    consumer.close();
+  @Override public void close(Pos pos) {
+    consumer.close(pos);
   }
 
-  @Override public ObjectHandler comment(String comment) {
+  @Override public ObjectHandler comment(Pos pos, String comment) {
     return this; // ignore comment
   }
 
@@ -118,7 +118,8 @@ abstract class ValidatingHandler implements ObjectHandler {
       return true; // property is valid
     }
 
-    @Override public ObjectHandler number(String propertyName, Number value) {
+    @Override public ObjectHandler number(Pos pos, String propertyName,
+        Number value) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (!propertyIsValid(propertyName, property, LookmlSchema.Type.NUMBER)) {
         return this;
@@ -127,11 +128,12 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return this;
       }
-      consumer.property(property, value);
+      consumer.property(pos, property, value);
       return this;
     }
 
-    @Override public ObjectHandler string(String propertyName, String value) {
+    @Override public ObjectHandler string(Pos pos, String propertyName,
+        String value) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (!propertyIsValid(propertyName, property, LookmlSchema.Type.STRING)) {
         return this;
@@ -140,11 +142,12 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return this;
       }
-      consumer.property(property, value);
+      consumer.property(pos, property, value);
       return this;
     }
 
-    @Override public ObjectHandler code(String propertyName, String value) {
+    @Override public ObjectHandler code(Pos pos, String propertyName,
+        String value) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (!propertyIsValid(propertyName, property, LookmlSchema.Type.CODE)) {
         return this;
@@ -153,11 +156,11 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return this;
       }
-      consumer.property(property, value);
+      consumer.property(pos, property, value);
       return this;
     }
 
-    @Override public ObjectHandler identifier(String propertyName,
+    @Override public ObjectHandler identifier(Pos pos, String propertyName,
         String value) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (property == null) {
@@ -185,11 +188,11 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return this;
       }
-      consumer.property(property, value);
+      consumer.property(pos, property, value);
       return this;
     }
 
-    @Override public ObjectHandler objOpen(String propertyName) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (!propertyIsValid(propertyName, property, LookmlSchema.Type.OBJECT)) {
         return LaxHandlers.nullObjectHandler();
@@ -198,14 +201,15 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return LaxHandlers.nullObjectHandler();
       }
-      final PropertyHandler subConsumer = consumer.objOpen(property);
+      final PropertyHandler subConsumer = consumer.objOpen(pos, property);
       final LookmlSchema.ObjectType objectType =
           root.schema.objectTypes().get(propertyName);
       return new NonRootValidatingHandler(subConsumer, root, propertyName,
           objectType.properties());
     }
 
-    @Override public ObjectHandler objOpen(String propertyName, String name) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName,
+        String name) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (!propertyIsValid(propertyName, property,
           LookmlSchema.Type.NAMED_OBJECT)) {
@@ -215,14 +219,14 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateNamedProperty(propertyName, name);
         return LaxHandlers.nullObjectHandler();
       }
-      final PropertyHandler subConsumer = consumer.objOpen(property, name);
+      final PropertyHandler subConsumer = consumer.objOpen(pos, property, name);
       final LookmlSchema.ObjectType objectType =
           root.schema.objectTypes().get(propertyName);
       return new NonRootValidatingHandler(subConsumer, root, propertyName,
           objectType.properties());
     }
 
-    @Override public ListHandler listOpen(String propertyName) {
+    @Override public ListHandler listOpen(Pos pos, String propertyName) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (property == null) {
         root.errorHandler.invalidPropertyOfParent(propertyName, parentTypeName);
@@ -239,7 +243,7 @@ abstract class ValidatingHandler implements ObjectHandler {
         root.errorHandler.duplicateProperty(propertyName);
         return LaxHandlers.nullListHandler();
       }
-      final ListHandler listHandler = consumer.listOpen(property);
+      final ListHandler listHandler = consumer.listOpen(pos, property);
       return new ValidatingListHandler(listHandler, root, property);
     }
   }
@@ -270,33 +274,36 @@ abstract class ValidatingHandler implements ObjectHandler {
           || valueSet.contains("yes") && valueSet.contains("no");
     }
 
-    @Override public ObjectHandler number(String propertyName, Number value) {
+    @Override public ObjectHandler number(Pos pos, String propertyName,
+        Number value) {
       errorHandler.invalidRootProperty(propertyName);
       return this;
     }
 
-    @Override public ObjectHandler string(String propertyName, String value) {
-      errorHandler.invalidRootProperty(propertyName);
-      return this;
-    }
-
-    @Override public ObjectHandler identifier(String propertyName,
+    @Override public ObjectHandler string(Pos pos, String propertyName,
         String value) {
       errorHandler.invalidRootProperty(propertyName);
       return this;
     }
 
-    @Override public ObjectHandler code(String propertyName, String value) {
+    @Override public ObjectHandler identifier(Pos pos, String propertyName,
+        String value) {
       errorHandler.invalidRootProperty(propertyName);
       return this;
     }
 
-    @Override public ListHandler listOpen(String propertyName) {
+    @Override public ObjectHandler code(Pos pos, String propertyName,
+        String value) {
+      errorHandler.invalidRootProperty(propertyName);
+      return this;
+    }
+
+    @Override public ListHandler listOpen(Pos pos, String propertyName) {
       errorHandler.invalidRootProperty(propertyName);
       return LaxHandlers.nullListHandler();
     }
 
-    @Override public ObjectHandler objOpen(String propertyName) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName) {
       final LookmlSchema.Property property =
           schema.rootProperties().get(propertyName);
       if (property != null
@@ -308,13 +315,14 @@ abstract class ValidatingHandler implements ObjectHandler {
       return LaxHandlers.nullObjectHandler();
     }
 
-    @Override public ObjectHandler objOpen(String propertyName, String name) {
+    @Override public ObjectHandler objOpen(Pos pos, String propertyName,
+        String name) {
       final LookmlSchema.Property property = propertyMap.get(propertyName);
       if (property == null) {
         errorHandler.invalidRootProperty(propertyName);
         return LaxHandlers.nullObjectHandler();
       }
-      final PropertyHandler subConsumer = consumer.objOpen(property, name);
+      final PropertyHandler subConsumer = consumer.objOpen(pos, property, name);
       final LookmlSchema.ObjectType objectType =
           schema.objectTypes().get(propertyName);
       return new NonRootValidatingHandler(subConsumer, this, propertyName,
@@ -338,41 +346,41 @@ abstract class ValidatingHandler implements ObjectHandler {
           || property.type() == LookmlSchema.Type.REF_STRING_MAP);
     }
 
-    @Override public ListHandler string(String value) {
+    @Override public ListHandler string(Pos pos, String value) {
       if (property.type() != LookmlSchema.Type.STRING_LIST) {
         root.errorHandler.invalidListElement(property.name(),
             LookmlSchema.Type.STRING, property.type());
         return this; // skip the element
       }
-      return super.string(value);
+      return super.string(pos, value);
     }
 
-    @Override public ListHandler number(Number value) {
+    @Override public ListHandler number(Pos pos, Number value) {
       // Currently, there is no type of list whose elements are numbers.
       root.errorHandler.invalidListElement(property.name(),
           LookmlSchema.Type.NUMBER, property.type());
       return this; // skip the element
     }
 
-    @Override public ListHandler identifier(String value) {
+    @Override public ListHandler identifier(Pos pos, String value) {
       if (property.type() != LookmlSchema.Type.REF_LIST) {
         root.errorHandler.invalidListElement(property.name(),
             LookmlSchema.Type.REF, property.type());
         return this; // skip the element
       }
-      return super.identifier(value);
+      return super.identifier(pos, value);
     }
 
-    @Override public ListHandler pair(String ref, String identifier) {
+    @Override public ListHandler pair(Pos pos, String ref, String identifier) {
       if (property.type() != LookmlSchema.Type.REF_STRING_MAP) {
         root.errorHandler.invalidListElement(property.name(),
             LookmlSchema.Type.REF, property.type());
         return this; // skip the element
       }
-      return super.pair(ref, identifier);
+      return super.pair(pos, ref, identifier);
     }
 
-    @Override public ListHandler listOpen() {
+    @Override public ListHandler listOpen(Pos pos) {
       // Currently, there is no type of list whose elements are lists.
       root.errorHandler.invalidListElement(property.name(),
           LookmlSchema.Type.REF_LIST, property.type());

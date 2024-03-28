@@ -26,25 +26,27 @@ package net.hydromatic.lookml;
  * @see ListHandler */
 public interface PropertyHandler {
   /** Adds a property value. */
-  PropertyHandler property(LookmlSchema.Property property, Object value);
+  PropertyHandler property(Pos pos, LookmlSchema.Property property,
+      Object value);
 
   /** Starts a property whose value is a list. */
-  ListHandler listOpen(LookmlSchema.Property property);
+  ListHandler listOpen(Pos pos, LookmlSchema.Property property);
 
   /** Starts a property whose value is an object, and returns the handler
    * for the sub-object.
    *
    * <p>You must call {@link #close} on the returned handler. */
-  PropertyHandler objOpen(LookmlSchema.Property property);
+  PropertyHandler objOpen(Pos pos, LookmlSchema.Property property);
 
   /** Starts a property whose value is a named object, and returns the handler
    * for the sub-object.
    *
    * <p>You must call {@link #close} on the returned handler. */
-  PropertyHandler objOpen(LookmlSchema.Property property, String name);
+  PropertyHandler objOpen(Pos pos, LookmlSchema.Property property,
+      String name);
 
   /** Closes this handler. */
-  void close();
+  void close(Pos pos);
 }
 
 // End PropertyHandler.java
