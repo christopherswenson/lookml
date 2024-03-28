@@ -20,10 +20,7 @@ package net.hydromatic.lookml;
 
 import com.google.common.base.Suppliers;
 
-import java.net.URL;
 import java.util.function.Supplier;
-
-import static java.util.Objects.requireNonNull;
 
 /** Defines Schema-LookML, a dialect of LookML for defining schemas.
  *
@@ -73,14 +70,14 @@ public class SchemaLookml {
 
   private SchemaLookml() {}
 
-  /** Returns the URL of a file that contains the Schema-LookML schema.
+  /** Returns a source based on the file that contains the Schema-LookML schema.
    *
    * <p>The contents of this file creates a schema identical to that returned
-   * from {@link #schema()}. This is verified by a test. */
-  public static URL getSchemaUrl() {
-    final URL url =
-        SchemaLookml.class.getResource("/lookml/schema-schema.lkml");
-    return requireNonNull(url);
+   * from {@link #schema()}. This is verified by a test.
+   */
+  public static Source getSchemaSource() {
+    return Sources.fromUrl(
+        SchemaLookml.class.getResource("/lookml/schema-schema.lkml"));
   }
 
   /** Returns the schema Schema-LookML. It can be used to validate any

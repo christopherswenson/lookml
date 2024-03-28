@@ -172,9 +172,10 @@ ObjectHandler h =
         return this;
       }
     };
-LookmlParsers.parse(h, code,
+LookmlParsers.parse(h,
     LookmlParsers.config()
-        .withCodePropertyNames(Collections.singleton("lyric")));
+        .withCodePropertyNames(Collections.singleton("lyric"))
+        .withSource(Sources.fromString(code)));
 ```
 prints
 ```

@@ -26,7 +26,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -58,9 +57,10 @@ public class MiniLookml {
    * of every property in {@link #schema()}. */
   private static final Supplier<String> EXAMPLE_MODEL_SUPPLIER =
       Suppliers.memoize(() ->
-          LookmlSchemas.urlContents(
+          Sources.fromUrl(
               LaxTest.class.getResource(
-                  "/lookml/mini-lookml-example-model.lkml")));
+                  "/lookml/mini-lookml-example-model.lkml"))
+              .contentsAsString());
 
   /** Caches the schema. */
   private static final Supplier<LookmlSchema> SCHEMA_SUPPLIER =
@@ -157,12 +157,13 @@ public class MiniLookml {
         .build();
   }
 
-  /** Returns the URL of a file that contains the Mini-LookML schema.
+  /** Returns a source based on the file that contains the Mini-LookML schema.
    *
    * <p>The contents of this file creates a schema identical to that returned
    * from {@link #schema()}. This is verified by a test. */
-  public static URL getSchemaUrl() {
-    return LaxTest.class.getResource("/lookml/mini-lookml-schema.lkml");
+  public static Source getSchemaSource() {
+    return Sources.fromUrl(
+        LaxTest.class.getResource("/lookml/mini-lookml-schema.lkml"));
   }
 
   /** Creates a builder for Mini-LookML's AST.

@@ -31,18 +31,18 @@ import static java.util.Objects.hash;
 
 /** Position of a parse-tree node. */
 public class Pos {
-  public static final Pos ZERO = new Pos("", 0, 0, 0, 0);
+  public static final Pos ZERO = new Pos(Sources.fromString(""), 0, 0, 0, 0);
 
-  public final String file;
+  public final Source source;
   public final int startLine;
   public final int startColumn;
   public final int endLine;
   public final int endColumn;
 
   /** Creates a Pos. */
-  public Pos(String file, int startLine, int startColumn,
+  public Pos(Source source, int startLine, int startColumn,
       int endLine, int endColumn) {
-    this.file = file;
+    this.source = source;
     this.startLine = startLine;
     this.startColumn = startColumn;
     this.endLine = endLine;
@@ -50,10 +50,11 @@ public class Pos {
   }
 
   /** Creates a Pos from two offsets. */
-  public static Pos of(String ml, String file, int startOffset, int endOffset) {
+  public static Pos of(String ml, Source source, int startOffset,
+      int endOffset) {
     IntPair start = lineCol(ml, startOffset);
     IntPair end = lineCol(ml, endOffset);
-    return new Pos(file, start.left, start.right, end.left, end.right);
+    return new Pos(source, start.left, start.right, end.left, end.right);
   }
 
   @Override public int hashCode() {
@@ -74,9 +75,11 @@ public class Pos {
   }
 
   public StringBuilder describeTo(StringBuilder buf) {
-    buf.append(file)
-        .append(file.isEmpty() ? "" : ":")
-        .append(startLine)
+    buf.append(source);
+    if (buf.length() > 0) {
+      buf.append(':');
+    }
+    buf.append(startLine)
         .append('.')
         .append(startColumn);
     if (endColumn != startColumn + 1 || endLine != startLine) {
@@ -146,12 +149,12 @@ public class Pos {
       int endColumn) {
     int testLine;
     int testColumn;
-    String file = Pos.ZERO.file;
+    Source source = Pos.ZERO.source;
     for (Pos pos : poses) {
       if (pos == null || pos.equals(Pos.ZERO)) {
         continue;
       }
-      file = pos.file;
+      source = pos.source;
       testLine = pos.startLine;
       testColumn = pos.startColumn;
       if (testLine < line || testLine == line && testColumn < column) {
@@ -166,7 +169,7 @@ public class Pos {
         endColumn = testColumn;
       }
     }
-    return new Pos(file, line, column, endLine, endColumn);
+    return new Pos(source, line, column, endLine, endColumn);
   }
 
   public Pos plus(Pos pos) {
@@ -186,7 +189,7 @@ public class Pos {
       endLine = this.endLine;
       endColumn = this.endColumn;
     }
-    return new Pos(file, startLine, startColumn, endLine, endColumn);
+    return new Pos(source, startLine, startColumn, endLine, endColumn);
   }
 
   public Pos plusAll(Iterable<Pos> poses) {

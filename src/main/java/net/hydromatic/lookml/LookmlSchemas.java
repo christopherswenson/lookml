@@ -21,7 +21,6 @@ package net.hydromatic.lookml;
 import net.hydromatic.lookml.parse.LookmlParsers;
 import net.hydromatic.lookml.util.PairList;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
@@ -30,11 +29,6 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -64,8 +58,8 @@ public class LookmlSchemas {
   }
 
   /** Loads a schema from a file in Schema LookML format. */
-  public static LookmlSchema load(URL url, @Nullable LookmlSchema schema) {
-    final String s = urlContents(url);
+  public static LookmlSchema load(Source source,
+      @Nullable LookmlSchema schema) {
 
     // Parse the string into an AST
     final List<PairList<String, Value>> list = new ArrayList<>();
@@ -79,7 +73,7 @@ public class LookmlSchemas {
     } else {
       errorList = ImmutableList.of();
     }
-    LookmlParsers.parse(handler, s, LookmlParsers.config());
+    LookmlParsers.parse(handler, LookmlParsers.config().withSource(source));
     if (!errorList.isEmpty()) {
       throw new IllegalArgumentException("invalid: " + errorList);
     }
@@ -87,28 +81,6 @@ public class LookmlSchemas {
     final SchemaBuilder b = schemaBuilder();
     new AstWalker(b).accept(list.get(0));
     return b.build();
-  }
-
-  /** Returns the contents of a URL.
-   *
-   * <p>We can obsolete this method when we have a way to invoke the parser
-   * on multiple sources (strings, files, URLs). */
-  public static String urlContents(URL url) {
-    try (InputStream stream = url.openStream();
-         Reader r = new InputStreamReader(stream, Charsets.ISO_8859_1)) {
-      final char[] buf = new char[2048];
-      final StringBuilder sb = new StringBuilder();
-      for (;;) {
-        int c = r.read(buf);
-        if (c < 0) {
-          break;
-        }
-        sb.append(buf, 0, c);
-      }
-      return sb.toString();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   /** Returns whether two {@link LookmlSchema} instances are equal. */

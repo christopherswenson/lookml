@@ -24,6 +24,8 @@ import net.hydromatic.lookml.LookmlSchemas;
 import net.hydromatic.lookml.MiniLookml;
 import net.hydromatic.lookml.ObjectHandler;
 import net.hydromatic.lookml.SchemaLookml;
+import net.hydromatic.lookml.Source;
+import net.hydromatic.lookml.Sources;
 import net.hydromatic.lookml.parse.LookmlParsers;
 
 import com.google.common.collect.ImmutableList;
@@ -33,7 +35,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -291,9 +292,10 @@ public class LaxTest {
             return this;
           }
         };
-    LookmlParsers.parse(h, code,
+    LookmlParsers.parse(h,
         LookmlParsers.config()
-            .withCodePropertyNames(Collections.singleton("lyric")));
+            .withCodePropertyNames(Collections.singleton("lyric"))
+            .withSource(Sources.fromString(code)));
     assertThat(sw,
         hasToString(" Living is easy with eyes closed\n"
             + "      Misunderstanding all you see\n"
@@ -554,14 +556,14 @@ public class LaxTest {
    *
    * <p>Also lets the schema-schema validate itself. */
   @Test void testCompareSchemaSchema() {
-    final URL url = SchemaLookml.getSchemaUrl();
-    final LookmlSchema schema = LookmlSchemas.load(url, null);
+    final Source source = SchemaLookml.getSchemaSource();
+    final LookmlSchema schema = LookmlSchemas.load(source, null);
     final LookmlSchema schemaSchema = SchemaLookml.schema();
     assertThat(LookmlSchemas.compare(schema, schemaSchema), empty());
     assertThat(LookmlSchemas.equal(schema, schemaSchema), is(true));
 
     // Use the schema to validate itself.
-    final LookmlSchema schema2 = LookmlSchemas.load(url, schema);
+    final LookmlSchema schema2 = LookmlSchemas.load(source, schema);
     assertThat(LookmlSchemas.equal(schema, schema2), is(true));
   }
 
@@ -569,9 +571,9 @@ public class LaxTest {
    * {@code mini-lookml-schema.lkml} is equivalent to the one created by the
    * {@link MiniLookml#schema()} method. */
   @Test void testCompareMiniSchema() {
-    final URL url = MiniLookml.getSchemaUrl();
+    final Source source = MiniLookml.getSchemaSource();
     final LookmlSchema schema =
-        LookmlSchemas.load(url, SchemaLookml.schema());
+        LookmlSchemas.load(source, SchemaLookml.schema());
     final LookmlSchema miniSchema = MiniLookml.schema();
     assertThat(LookmlSchemas.compare(schema, miniSchema), empty());
     assertThat(LookmlSchemas.equal(schema, miniSchema), is(true));
@@ -585,9 +587,10 @@ public class LaxTest {
     final List<String> errorList = new ArrayList<>();
     final LookmlParsers.Config config =
         LookmlParsers.config()
-            .withCodePropertyNames(schema.codePropertyNames());
+            .withCodePropertyNames(schema.codePropertyNames())
+            .withSource(Sources.fromString(model));
     LookmlSchemas.checkCompleteness(schema,
-        objectHandler -> LookmlParsers.parse(objectHandler, model, config),
+        objectHandler -> LookmlParsers.parse(objectHandler, config),
         errorList);
     assertThat(errorList, empty());
   }

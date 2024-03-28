@@ -24,6 +24,7 @@ import net.hydromatic.lookml.LookmlSchema;
 import net.hydromatic.lookml.MiniLookml;
 import net.hydromatic.lookml.ObjectHandler;
 import net.hydromatic.lookml.PropertyHandler;
+import net.hydromatic.lookml.Sources;
 import net.hydromatic.lookml.parse.LookmlParsers;
 
 import com.google.common.collect.ImmutableSortedSet;
@@ -79,16 +80,18 @@ class ParseFixture {
     final List<String> list = new ArrayList<>();
     final List<String> errorList = new ArrayList<>();
     final LookmlParsers.Config config =
-        LookmlParsers.config().withCodePropertyNames(codePropertyNames);
+        LookmlParsers.config()
+            .withCodePropertyNames(codePropertyNames)
+            .withSource(Sources.fromString(code));
     final ObjectHandler logger = LaxHandlers.logger(list::add);
     if (schema != null) {
       final ErrorHandler errorHandler =
           LaxHandlers.errorLogger(errorList::add);
       final ObjectHandler validator =
           LaxHandlers.validator(logger, schema, errorHandler);
-      LookmlParsers.parse(validator, code, config);
+      LookmlParsers.parse(validator, config);
     } else {
-      LookmlParsers.parse(logger, code, config);
+      LookmlParsers.parse(logger, config);
     }
     return new Parsed(this, list, errorList, code);
   }
@@ -130,9 +133,11 @@ class ParseFixture {
     List<String> discardedEvents() {
       final List<String> list2 = new ArrayList<>();
       final ObjectHandler logger = LaxHandlers.logger(list2::add);
-      LookmlParsers.parse(logger, s,
+      final LookmlParsers.Config config =
           LookmlParsers.config()
-              .withCodePropertyNames(parseFixture.codePropertyNames));
+              .withCodePropertyNames(parseFixture.codePropertyNames)
+              .withSource(Sources.fromString(s));
+      LookmlParsers.parse(logger, config);
       return minus(list2, list);
     }
 
@@ -155,9 +160,11 @@ class ParseFixture {
       final ObjectHandler validator =
           LaxHandlers.validator(astBuilder, parseFixture.schema,
               LaxHandlers.errorLogger(errorList::add));
-      LookmlParsers.parse(validator, s,
+      final LookmlParsers.Config config =
           LookmlParsers.config()
-              .withCodePropertyNames(parseFixture.codePropertyNames));
+              .withCodePropertyNames(parseFixture.codePropertyNames)
+              .withSource(Sources.fromString(s));
+      LookmlParsers.parse(validator, config);
       assertThat(errorList, empty());
       return (MiniLookml.Model) Iterables.getOnlyElement(list.values());
     }
